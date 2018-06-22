@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>EventViewer</title>
+	<meta charset="utf-8">
+	
+	<style>
+		circle,
+		path {
+		  cursor: pointer;
+		}
+		circle {
+		  fill: none;
+		  pointer-events: all;
+		}
+</style>
+
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+
+<script src="https://d3js.org/colorbrewer.v1.min.js"></script>
+
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+<!-- jQuery library -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<!-- Latest compiled JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+<script src="main.js"></script>
+
+</head>
+<body>
+
+
+
+<form>
+  <div>
+    <label for="start-date">Start date:</label>
+    <input type="date" id="start" name="start-date">
+	<input id="start-time" type="time" name="start-time" step="1">
+	
+	<br></br>
+	
+	<label for="end-date">End date:</label>
+    <input type="date" id="end" name="end-date">
+	<input id="end-time" type="time" name="end-time" step="1">
+	
+	<br></br>
+	
+		<div class="dropdown">
+			<button class="btn btn-primary dropdown-toggle" type="button" id="visual-dropdown" 
+							data-toggle="dropdown">Select a Visual
+			<span class="caret"></span></button>
+			<ul class="dropdown-menu">
+				<li><a href="#" data-value="Zoomable Sunburst">Zoomable Sunburst</a></li>
+				<li><a href="#" data-value="Horizontal Tree">Horizontal Tree</a></li>
+				<li><a href="#" data-value="Calendar">Calendar</a></li>
+			</ul>
+		</div>
+  </div>  
+</form>
+
+</body>
+</html>
