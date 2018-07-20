@@ -1,68 +1,201 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" id="bootstrap-override-html">
 <head>
 	<title>EventViewer</title>
 	<meta charset="utf-8">
 	
-	<style>
+	<link href="./clusterize.css" rel="stylesheet">
+	<script src="./clusterize.min.js"></script>
+	
+	<link href="https://cdn.jsdelivr.net/clusterize.js/0.16.1/clusterize.css" rel="stylesheet" type="text/css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/clusterize.js/0.16.1/clusterize.min.js" type="text/javascript">
+
+	<script src="https://d3js.org/d3.v3.min.js" type="text/javascript"></script>
+
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+
+	<!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+	<!-- jQuery library -->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+	<!-- Latest compiled JavaScript -->
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+	
+	
+	
+	<style>	
 		circle,
 		path {
-		  cursor: pointer;
+			cursor: pointer;
 		}
 		circle {
+			fill: none;
+			pointer-events: all;
+		}
+		
+		html {
+			font-family: sans-serif;
+		}
+	
+		#tooltip { 
+			background-color: white;
+			padding: 3px 5px;
+			border: 1px solid black;
+			text-align: center;
+		}
+	
+		.chart {
+			background: #fff;
+			margin: 5px;
+		}
+
+		.calendar-map {
+		  font: 10px sans-serif;
+		  shape-rendering: crispEdges;
+		}
+		.day {
+		  stroke: #666;
+		}
+		.month {
 		  fill: none;
-		  pointer-events: all;
+		  stroke: #000;
+		  stroke-width: 2px;
+		}
+
+		.node circle {
+		   fill: #fff;
+		   stroke: steelblue;
+		   stroke-width: 3px;
+		}
+
+		.node text { font: 17px sans-serif; }
+
+		.link {
+		   fill: none;
+		   stroke: #ccc;
+		   stroke-width: 2px;
+		 }
+		 
+<!-- 		thead {
+			display: table-header-group;
+		} -->
+ 
+		tr:nth-of-type(odd) {
+		  background: #eee;
+		}
+		tr:nth-of-type(even) {
+		  background: white;
+		}
+		
+		th {
+		  background: #333;
+		  color: white;
+		  font-weight: bold;
+		  background-repeat: no-repeat;
+		}
+		
+		td, th {
+		  padding: 6px;
+		  border: 1px solid #ccc;
+		  text-align: center;
+		  width: 6.67% !important;
+		  overflow:hidden;
+		}
+		
+		table {
+			table-layout:fixed;
+		}
+		
+		#bootstrap-overrides h2 {
+			margin:0; 
+			padding:0;
+		}
+		
+		#bootstrap-overrides h2 {
+			margin:0; 
+			padding:0;
+		}
+		
+		#bootstrap-overrides div {
+			margin:0; 
+			padding:0;
+		}
+		
+		#bootstrap-override-html {
+			background-color: #342580;
+		}
+		
+		#bootstrap-overrides button#visual-dropdown:hover, button#visual-dropdown:active, button#visual-dropdown:focus{
+			background-color: #9f258a !important;
+		}
+		
+		#bootstrap-overrides button#update-visual:hover {
+			background-color: #9f258a !important;
+		}
+		
+		#bootstrap-overrides, #bootstrap-override-html{
+			height: 100%;
+			background-color: #342580;
+		}
+		
+		.clusterize table {
+			width:100%;
+			border: 1px solid #000;
+			border-collapse: collapse;
+			border-spacing: 0;
+		}
+		.clusterize td {
+			border: 1px solid #000;
 		}
 </style>
 
-
-<script src="http://d3js.org/d3.v3.min.js"></script>
-
-<script src="https://d3js.org/colorbrewer.v1.min.js"></script>
-
-
-<!-- Latest compiled and minified CSS -->
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-
-<!-- jQuery library -->
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-
-<!-- Latest compiled JavaScript -->
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-
-<script src="main.js"></script>
-
 </head>
-<body>
+<body id="bootstrap-overrides">
 
-
-
-<form>
-  <div>
-    <label for="start-date">Start date:</label>
-    <input type="date" id="start" name="start-date">
-	<input id="start-time" type="time" name="start-time" step="1">
+	<div style="background-color:#001c6d;">
+		<h2 style="color:white"><span style="font-weight:bold;">ITRS </span>EventViewer</h2>
+	</div>
 	
-	<br></br>
+	<div style="background-color:#342580">
+		
+		<br></br>
+		<br></br>
+		
+		<label for="start-date" style="color:white">Start date (optional):</label>
+		<input type="date" id="start" name="start-date">
+		<input type="time" id="start-time" name="start-time" step="1">
+		
+		<br></br>
+		
+		<label for="end-date" style="color:white">End date (optional):</label>
+		<input type="date" id="end" name="end-date">
+		<input type="time" id="end-time" name="end-time" step="1">
+		<button id="update-visual" class="btn btn-light btn-sm" style="margin-left:20px; background-color:#612c8e; color:white">Update Visual</button>
+		
+		<br></br>
+		
 	
-	<label for="end-date">End date:</label>
-    <input type="date" id="end" name="end-date">
-	<input id="end-time" type="time" name="end-time" step="1">
-	
-	<br></br>
-	
+		
 		<div class="dropdown">
-			<button class="btn btn-primary dropdown-toggle" type="button" id="visual-dropdown" 
-							data-toggle="dropdown">Select a Visual
+			<button class="btn btn-primary btn-hover dropdown-toggle" type="button" id="visual-dropdown" 
+			style="background-color:#612c8e; border-color:#612c8e;"
+							data-toggle="dropdown">Select a visual
 			<span class="caret"></span></button>
 			<ul class="dropdown-menu">
 				<li><a href="#" data-value="Zoomable Sunburst">Zoomable Sunburst</a></li>
-				<li><a href="#" data-value="Horizontal Tree">Horizontal Tree</a></li>
+				<li><a href="#" data-value="Collapsible Tree">Collapsible Tree</a></li>
 				<li><a href="#" data-value="Calendar">Calendar</a></li>
 			</ul>
 		</div>
-  </div>  
-</form>
+	
+	</div>
+
+<div id="sequence" style="background-color:#4f3b82"></div>
+<div id="diagramContainer" style="background-color:#4f3b82"></div>
 
 </body>
+
+<script src="main.js"></script>
 </html>
