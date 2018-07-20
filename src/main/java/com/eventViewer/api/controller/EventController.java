@@ -1,15 +1,26 @@
 package com.eventViewer.api.controller;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import org.joda.time.DateTime;
+import org.joda.time.LocalDate;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.datetime.joda.DateTimeParser;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -65,16 +76,71 @@ public class EventController {
     		return new ResponseEntity(HttpStatus.NO_CONTENT);
     	else {
         	if(start != null && end != null)
-        		formattedJSON = formatZoomableSunburst(start, end);
+        		formattedJSON = formatDiagram("zoomableSunburst", start, end);
         	else if(start != null && end == null)
-        		formattedJSON = formatZoomableSunburst(start, null);
+        		formattedJSON = formatDiagram("zoomableSunburst", start, null);
         	else if(start == null && end != null)
-        		formattedJSON = formatZoomableSunburst(null, end);
+        		formattedJSON = formatDiagram("zoomableSunburst", null, end);
         	else
-        		formattedJSON = formatZoomableSunburst(null, null);
-    		return new ResponseEntity<String>(formattedJSON, HttpStatus.OK);
+        		formattedJSON = formatDiagram("zoomableSunburst", null, null);
     	}
+    	
+    		return new ResponseEntity<String>(formattedJSON, HttpStatus.OK);
     }
+    
+    @RequestMapping(value = "/collapsibleTreeJSON",
+    		produces = { MediaType.APPLICATION_JSON_VALUE },
+    		method = RequestMethod.GET)
+    public ResponseEntity<String> getcollapsibleTreeJSON(@RequestParam("start") Optional<Long> start,
+    													  @RequestParam("end")   Optional<Long> end) throws JSONException {
+    	
+    	String formattedJSON;
+    	
+    	if(false)
+    		return new ResponseEntity(HttpStatus.NO_CONTENT);
+    	else {
+        	if(start != null && end != null)
+        		formattedJSON = formatDiagram("collapsibleTree", start, end);
+        	else if(start != null && end == null)
+        		formattedJSON = formatDiagram("collapsibleTree", start, null);
+        	else if(start == null && end != null)
+        		formattedJSON = formatDiagram("collapsibleTree", null, end);
+        	else
+        		formattedJSON = formatDiagram("collapsibleTree", null, null);
+    	}
+    	
+    		return new ResponseEntity<String>(formattedJSON, HttpStatus.OK);
+    }
+    
+    @RequestMapping(value = "/calendarViewJSON",
+    		produces = { MediaType.APPLICATION_JSON_VALUE },
+    		method = RequestMethod.GET)
+    public ResponseEntity<String> getZoomableSunburstJSON() throws JSONException {
+    	
+    	String formattedJSON;
+    	
+    	if(false)
+    		return new ResponseEntity(HttpStatus.NO_CONTENT);
+    	else
+    		formattedJSON = formatCalendarView();
+    	
+    		return new ResponseEntity<String>(formattedJSON, HttpStatus.OK);
+    	
+    }
+    
+    @RequestMapping(value = "/start/{start}/end/{end}",
+    		produces = { MediaType.APPLICATION_JSON_VALUE },
+    		method = RequestMethod.GET)
+    public ResponseEntity<List<Event>> getAllEventsInSelectedCalendarDay(@PathVariable("start") String start,
+    		@PathVariable("end") String end) {
+    	
+    	List<Event> events = eventRepository.findEventsBetweenTimes(Long.parseLong(start), Long.parseLong(end));
+    	    	
+    	if(events.isEmpty())
+    		return new ResponseEntity(HttpStatus.NO_CONTENT);
+        return new ResponseEntity<List<Event>>(events, HttpStatus.OK);
+    }
+    
     
     //GET DISTINCT GATEWAYS FROM ALL EVENTS
     @RequestMapping(value = "/gateways", method = RequestMethod.GET)
@@ -97,7 +163,6 @@ public class EventController {
     }
     
     //GET DISTINCT SAMPLERS FOR A SPECIFIC PROBE
-    
     @RequestMapping(value = "/probes/{probe}/samplers", method = RequestMethod.GET)
     public ResponseEntity<List<String>> getDistinctSamplersByProbeName(@PathVariable("probe") String probe) {
     	
@@ -109,27 +174,53 @@ public class EventController {
     }
     
     //GET EVENT COUNT BASED ON SPECIFIC PROBE, SAMPLER, AND SEVERITY
-    @RequestMapping(value = "/gateways/{gateway}/probes/{probe}/samplers/{sampler}/severity/{severity}", method = RequestMethod.GET)
-    public ResponseEntity<?> getEventCountByProbeSamplerSeverity(@PathVariable("gateway") String gateway, @PathVariable("probe") String probe, @PathVariable("sampler") String sampler, @PathVariable("severity") String severity) {
+    @RequestMapping(value = "/gateways/{gateway}/probes/{probe}/samplers/{sampler}/severity/{severity}", produces = { MediaType.APPLICATION_JSON_VALUE }, method = RequestMethod.GET)
+    public ResponseEntity<?> getEventsByEntity(@PathVariable("gateway") String gateway, @PathVariable("probe") String probe, 
+    				@PathVariable("sampler") String sampler, @PathVariable("severity") String severity, @RequestParam("start") Optional<Long> start,
+    				@RequestParam("end") Optional<Long> end) {
     	
-    	int count = eventRepository.findEventCountBySeverity(gateway, probe, sampler, severity, null, null);
-    	return new ResponseEntity(count, HttpStatus.OK);
+    	if(severity.equals("critical"))
+    			severity = "2";
+    	else if(severity.equals("warning"))
+			severity = "1";
+    	else if(severity.equals("OK"))
+			severity = "0";
+    	else if(severity.equals("undefined"))
+			severity = "-1";
+    	
+    	List<Event> events; 
+    	    	
+    	if(start != null && end != null)
+    		events = eventRepository.findEventsByEntity(gateway, probe, sampler, severity, start, end);
+    	else if(start != null && end == null)
+    		events = eventRepository.findEventsByEntity(gateway, probe, sampler, severity, start, null);
+    	else if(start == null && end != null)
+    		events = eventRepository.findEventsByEntity(gateway, probe, sampler, severity, null, end);
+    	else
+    		events = eventRepository.findEventsByEntity(gateway, probe, sampler, severity, null, null);
+    	    	
+    	if(events.isEmpty())
+    		return new ResponseEntity(HttpStatus.NO_CONTENT);
+        return new ResponseEntity<List<Event>>(events, HttpStatus.OK);
     }
     
     
-    public String formatZoomableSunburst(Optional<Long> start, Optional<Long> end) throws JSONException {
-    
-    	JSONObject flare = new JSONObject();
-			flare.put("name", "flare");
+    public String formatDiagram(String diagram, Optional<Long> start, Optional<Long> end) throws JSONException {
+    	
+    	JSONObject diagramRoot = new JSONObject();
+    	
+    	if(diagram.equals("zoomableSunburst"))
+    		diagramRoot.put("name", "flare");
+    	else if(diagram.equals("collapsibleTree"))
+    		diagramRoot.put("name", "gateways");
 			
 			JSONArray flareChildren = new JSONArray();
 			
 			List<String> gateways = eventRepository.findDistinctGateways(start, end);
 			
-			JSONArray gatewayChildren = new JSONArray();
-			
 			for(String gatewayName : gateways)	{
 				
+				JSONArray gatewayChildren = new JSONArray();
 				JSONObject gateway = new JSONObject();
 				gateway.put("name", gatewayName);
 				gateway.put("children", gatewayChildren);
@@ -138,10 +229,10 @@ public class EventController {
 				
 				List<String> netProbes = eventRepository.findDistinctProbesByGateway(gatewayName, start, end);
 				
-				JSONArray netProbeChildren = new JSONArray();
 				
 				for(String netProbeName : netProbes) {
 					
+					JSONArray netProbeChildren = new JSONArray();
 					JSONObject netProbe = new JSONObject();
 					netProbe.put("name", netProbeName);
 					netProbe.put("children", netProbeChildren);
@@ -186,33 +277,56 @@ public class EventController {
 				}
 			}
 			
-			flare.put("children", flareChildren);
+			diagramRoot.put("children", flareChildren);
 			
-			return flare.toString();
+			return diagramRoot.toString();
     }
     
-    
-//    public Set findDistinctGateways(List<Event> events) {
+//    public String formatCollapsibleTree() {
 //    	
-//    	List<String> gatewayList = new ArrayList();
+//    	JSONArray array = new JSONArray();
 //    	
-//    	for(Event e : events) 
-//    		gatewayList.add(e.getGateway());
+//    	List records = eventRepository.findTimestampsAndSeveritys();
 //    	
-//    	return new HashSet(gatewayList);
-//    }
+//    	
+//    	JSONObject record = new JSONObject();
 //    
-//    public Set findDistinctNetProbesByGateway(List<Event> events, String gateway) {
-//
-//    	List<String> netProbeList = new ArrayList();
-//    	
-//    	for(Event e : events) 
-//    		if(e.getGateway().equals(gateway))
-//    			netProbeList.add(e.getGateway());
-//    	
-//    	return new HashSet(netProbeList);
+//    	return null;
 //    }
     
-
+    public String convertTime(long time){
+        Date date = new Date(time);
+        SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
+        return format.format(date);
+    }
     
+    public String formatCalendarView() throws JSONException {
+    	
+    	JSONArray array = new JSONArray();
+    	List<Event> events = eventRepository.findAll();
+    	
+    	HashMap<String, Integer> map = new HashMap<>();
+    	
+    	for(Event e : events) {
+    		
+	    	long timestamp = e.getTimestamp();
+	    	String date = convertTime(timestamp*1000);
+	    	
+    		if(map.containsKey(date))
+    			map.put(date, map.get(date) + 1);
+    		else
+    			map.put(date, 1);
+    	}
+    	
+		for(Map.Entry<String, Integer> e : map.entrySet()) {
+			
+	    	JSONObject record = new JSONObject();
+	    	
+	    	record.put("date", e.getKey());
+	    	record.put("value", e.getValue());
+	    	array.put(record);
+		}
+    	
+    	return array.toString();
+    }
 }

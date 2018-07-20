@@ -31,4 +31,5 @@ dependencies {
     compile("org.apache.tomcat.embed:tomcat-embed-jasper", "javax.servlet:jstl")
     compile("mysql:mysql-connector-java")
     testCompile('org.springframework.boot:spring-boot-starter-test')
+    compile 'joda-time:joda-time:2.10'
 }

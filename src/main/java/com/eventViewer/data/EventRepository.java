@@ -17,6 +17,9 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 	
 	@Query("FROM Event e WHERE (:start is NULL or e.timestamp >= :start) AND (:end is NULL or e.timestamp <= :end)")
 	public List findEventsBetweenOptionalTimes(@Param("start") Optional<Long> start, @Param("end") Optional<Long> end);
+	
+	@Query("FROM Event e WHERE e.timestamp >= :start AND e.timestamp <= :end")
+	public List findEventsBetweenTimes(@Param("start") Long start, @Param("end") Long end);
 
 	@Query("SELECT DISTINCT gateway FROM Event e WHERE (:start is NULL or e.timestamp >= :start) AND (:end is NULL or e.timestamp <= :end)")
 	public List findDistinctGateways(@Param("start") Optional<Long> start, @Param("end") Optional<Long> end);
@@ -33,5 +36,11 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 	@Query("SELECT COUNT(severity) FROM Event e WHERE gateway = :gateway AND sampler = :sampler AND probe = :probe AND severity = :severity AND (:start is NULL or e.timestamp >= :start) AND (:end is NULL or e.timestamp <= :end)")
 	public int findEventCountBySeverity(@Param("gateway") String gateway, @Param("probe") String probe, @Param("sampler") String sampler, @Param("severity") String severity, @Param("start") Optional<Long> start, @Param("end") Optional<Long> end);
 	
+	@Query("SELECT timestamp, severity FROM Event e")
+	public List findTimestampsAndSeveritys();
+
+	@Query("FROM Event e WHERE gateway = :gateway AND sampler = :sampler AND probe = :probe AND severity = :severity AND (:start is NULL or e.timestamp >= :start) AND (:end is NULL or e.timestamp <= :end)")
+	public List findEventsByEntity(@Param("gateway") String gateway, @Param("probe") String probe, @Param("sampler") String sampler, @Param("severity") String severity, @Param("start") Optional<Long> start, @Param("end") Optional<Long> end);
+
 }
 
