@@ -77,17 +77,17 @@ public class EventController {
      * @return ResponseEntity<String> - a ResponseEntity object containing a String representing a hierarchy of event data in a valid format
      * 									and a HTTPStatus code.
      * @throws JSONException - An exception thrown in the case of invalid JSON 
+     * @throws ExecutionException 
+     * @throws InterruptedException 
      */
     @RequestMapping(value = "/zoomableSunburstJSON",
     		produces = { MediaType.APPLICATION_JSON_VALUE },
     		method = RequestMethod.GET)
     public ResponseEntity<String> getZoomableSunburstJSON(@RequestParam("start") Optional<Long> start,
-    													  @RequestParam("end")   Optional<Long> end) throws JSONException {
+    													  @RequestParam("end")   Optional<Long> end) throws JSONException, InterruptedException, ExecutionException {
     	
     	String formattedJSON;
-    	
-		long startTime = System.nanoTime();
-    	
+     	
         if(start != null && end != null)
         	formattedJSON = formatVisual("zoomableSunburst", start, end);
         else if(start != null && end == null)
@@ -97,8 +97,6 @@ public class EventController {
         else
         	formattedJSON = formatVisual("zoomableSunburst", null, null);
     	
-		long endTime = System.nanoTime();
-		System.out.println("Duration of formatting JSON sunburst: " + (endTime - startTime)/1000000);
     	return new ResponseEntity<String>(formattedJSON, HttpStatus.OK);
     }
     
@@ -110,17 +108,17 @@ public class EventController {
      * @return ResponseEntity<String> - a ResponseEntity object containing a String representing a hierarchy of event data in a valid format
      * 									and a HTTPStatus code.
      * @throws JSONException - An exception thrown in the case of invalid JSON 
+     * @throws ExecutionException 
+     * @throws InterruptedException 
      */
     @RequestMapping(value = "/collapsibleTreeJSON",
     		produces = { MediaType.APPLICATION_JSON_VALUE },
     		method = RequestMethod.GET)
     public ResponseEntity<String> getcollapsibleTreeJSON(@RequestParam("start") Optional<Long> start,
-    													  @RequestParam("end")   Optional<Long> end) throws JSONException {
+    													  @RequestParam("end")   Optional<Long> end) throws JSONException, InterruptedException, ExecutionException {
     	
     	String formattedJSON;
-    	
-		long startTime = System.nanoTime();
-    	
+    	    	
        	if(start != null && end != null)
        		formattedJSON = formatVisual("collapsibleTree", start, end);
        	else if(start != null && end == null)
@@ -129,35 +127,25 @@ public class EventController {
        		formattedJSON = formatVisual("collapsibleTree", null, end);
        	else
        		formattedJSON = formatVisual("collapsibleTree", null, null);
-    
-    	
-		long endTime = System.nanoTime();
-		System.out.println("Duration of formatting JSON sunburst: " + (endTime - startTime)/1000000);
     	
     		return new ResponseEntity<String>(formattedJSON, HttpStatus.OK);
     }
-    
-    
+
     /**
      * Request method which formats event data into a hierarchy that may be consumed by d3.js Calendar visuals
      * @return ResponseEntity<String> - a ResponseEntity object containing a String representing a hierarchy of event data in a valid format
      * 									and a HTTPStatus code.
      * @throws JSONException - An exception thrown in the case of invalid JSON 
      */
-    @RequestMapping(value = "/calendarViewJSON",
+    @RequestMapping(value = "/calendarJSON",
     		produces = { MediaType.APPLICATION_JSON_VALUE },
     		method = RequestMethod.GET)
-    public ResponseEntity<String> getZoomableSunburstJSON() throws JSONException {
+    public ResponseEntity<String> getCalendarJSON() throws JSONException {
     	
     	String formattedJSON;
 
-    	long startTime = System.nanoTime();
-    	formattedJSON = formatCalendarView();
-    	long endTime = System.nanoTime();
-    			
-    	System.out.println("Duration: " + (endTime - startTime)/1000000);
-    	
-    	
+    	formattedJSON = formatCalendarData();
+    			    	
     	return new ResponseEntity<String>(formattedJSON, HttpStatus.OK);
     }
     
@@ -172,7 +160,7 @@ public class EventController {
     @RequestMapping(value = "/start/{start}/end/{end}",
     		produces = { MediaType.APPLICATION_JSON_VALUE },
     		method = RequestMethod.GET)
-    public ResponseEntity<List<Event>> getAllEventsInSelectedCalendarDay(@PathVariable("start") String start,
+    public ResponseEntity<List<Event>> getAllEventsBetweenTwoTimes(@PathVariable("start") String start,
     		@PathVariable("end") String end) {
     	
     	List<Event> events = eventRepository.findEventsBetweenTimes(Long.parseLong(start), Long.parseLong(end));
@@ -290,9 +278,6 @@ public class EventController {
     	
     	int eventCount;
     	
-		long startTime = System.nanoTime();
-
-
     	if(start != null && end != null)
     		eventCount = eventRepository.findEventCountBySeverityBetweenOptionalTimes(start, end, severity);
     	else if(start != null && end == null)
@@ -301,11 +286,7 @@ public class EventController {
     		eventCount = eventRepository.findEventCountBySeverityBetweenOptionalTimes(null, end, severity);
     	else
     		eventCount = eventRepository.findEventCountBySeverityBetweenOptionalTimes(null, null, severity);
-    	
-		long endTime = System.nanoTime();
-		
-		System.out.println("Duration of finding all events of a given day: " + (endTime - startTime)/1000000);
-    	    	
+    	    	    	
         return new ResponseEntity<Integer>(eventCount, HttpStatus.OK);
     }
     
@@ -336,81 +317,29 @@ public class EventController {
         return new ResponseEntity<Integer>(samplerCount, HttpStatus.OK);
     }
     
-   
-	/**
-	 * Request method which finds the number of distinct gateways from all logged events.
-     * @return ResponseEntity<Integer> - ResponseEntity object containing an Integer that represents the number of distinct gateways
-     * 									and a HttpStatus code.
-	 */
-    @RequestMapping(value = "/gateways", method = RequestMethod.GET)
-    public ResponseEntity<List<String>> getDistinctGateways() {
-    	
-    	List<String> gateways = eventRepository.findDistinctGateways(null, null);
-    	if(gateways.isEmpty())
-    		return new ResponseEntity(HttpStatus.NO_CONTENT);    	
-    	return new ResponseEntity<List<String>>(gateways, HttpStatus.OK);
-    }
-
-    
-	/**
-	 * Request method which finds the number of distinct probes from all logged events.
-     * @return ResponseEntity<Integer> - ResponseEntity object containing an Integer that represents the number of distinct probes
-     * 									and a HttpStatus code.
-	 */
-//    @RequestMapping(value = "/probes", method = RequestMethod.GET)
-//    public ResponseEntity<List<String>> getDistinctProbes() {
-//    	
-//    	List<String> probes = eventRepository.findDistinctProbes(null, null);
-//    	if(probes.isEmpty())
-//    		return new ResponseEntity(HttpStatus.NO_CONTENT);    	
-//    	return new ResponseEntity<List<String>>(probes, HttpStatus.OK);
-//    }
+     
     
     
 	/**
-	 * Request method which finds the number of distinct probes from all logged events.
+	 * Request method which finds the events logged of a particular gateway, probe, and sampler.
      * @return ResponseEntity<Integer> - ResponseEntity object containing an Integer that represents the number of distinct samplers 
      * 									of a particular probe and a HttpStatus code.
 	 */
-//    @RequestMapping(value = "/probes/{probe}/samplers", method = RequestMethod.GET)
-//    public ResponseEntity<List<String>> getDistinctSamplersByProbeName(@PathVariable("probe") String probe) {
-//    	
-//    	List<String> samplers = eventRepository.findDistinctSamplersByProbe(probe, null, null);
-//    	if(samplers.isEmpty())
-//    		return new ResponseEntity(HttpStatus.NO_CONTENT);
-//    	
-//    	return new ResponseEntity<List<String>>(samplers, HttpStatus.OK);
-//    }
-    
-	/**
-	 * Request method which finds the number of events logged of a given severity of a particular gateway, probe, and sampler.
-     * @return ResponseEntity<Integer> - ResponseEntity object containing an Integer that represents the number of distinct samplers 
-     * 									of a particular probe and a HttpStatus code.
-	 */
-    @RequestMapping(value = "/gateways/{gateway}/probes/{probe}/samplers/{sampler}/severity/{severity}", produces = { MediaType.APPLICATION_JSON_VALUE }, method = RequestMethod.GET)
-    public ResponseEntity<?> getEventsByEntity(@PathVariable("gateway") String gateway, @PathVariable("probe") String probe, 
-    				@PathVariable("sampler") String sampler, @PathVariable("severity") String severity, @RequestParam("start") Optional<Long> start,
+    @RequestMapping(value = "/gateways/{gateway}/probes/{probe}/samplers/{sampler}", produces = { MediaType.APPLICATION_JSON_VALUE }, method = RequestMethod.GET)
+    public ResponseEntity<?> getEventsByGatewayProbeSampler(@PathVariable("gateway") String gateway, @PathVariable("probe") String probe, 
+    				@PathVariable("sampler") String sampler, @RequestParam("start") Optional<Long> start,
     				@RequestParam("end") Optional<Long> end) {
-    	
-    	if(severity.equals("critical"))
-    			severity = "2";
-    	else if(severity.equals("warning"))
-			severity = "1";
-    	else if(severity.equals("OK"))
-			severity = "0";
-    	else if(severity.equals("undefined"))
-			severity = "-1";
     	
     	List<Event> events; 
     	    	
     	if(start != null && end != null)
-    		events = eventRepository.findEventsByEntity(gateway, probe, sampler, severity, start, end);
+    		events = eventRepository.findEventsByGatewayProbeSampler(gateway, probe, sampler, start, end);
     	else if(start != null && end == null)
-    		events = eventRepository.findEventsByEntity(gateway, probe, sampler, severity, start, null);
+    		events = eventRepository.findEventsByGatewayProbeSampler(gateway, probe, sampler, start, null);
     	else if(start == null && end != null)
-    		events = eventRepository.findEventsByEntity(gateway, probe, sampler, severity, null, end);
+    		events = eventRepository.findEventsByGatewayProbeSampler(gateway, probe, sampler, null, end);
     	else
-    		events = eventRepository.findEventsByEntity(gateway, probe, sampler, severity, null, null);
+    		events = eventRepository.findEventsByGatewayProbeSampler(gateway, probe, sampler, null, null);
     	    	
     	if(events.isEmpty())
     		return new ResponseEntity(HttpStatus.NO_CONTENT);
@@ -426,10 +355,8 @@ public class EventController {
      * @throws JSONException - Exception which catches any invalid JSON.
      */
     ExecutorService executor = Executors.newFixedThreadPool(20);
-    public String formatVisual(String visualType, Optional<Long> start, Optional<Long> end) throws JSONException {
-    	
-    	List<Callable<String>> callableTasks = new ArrayList<>();
-    	
+    public String formatVisual(String visualType, Optional<Long> start, Optional<Long> end) throws JSONException, InterruptedException, ExecutionException {
+    	    	
     	JSONObject visualRoot = new JSONObject();
     	
     	if(visualType.equals("zoomableSunburst"))
@@ -465,145 +392,117 @@ public class EventController {
 					
 					for(String samplerName : samplers) {
 						
-						executor.execute(new Runnable() {
-				            @Override
-				            public void run() {
-				                try {
-				           			Future<String> future = getSamplerData(samplerName, netProbeChildren, gatewayName, netProbeName, start, end);
-									
-								} catch (InterruptedException | ExecutionException e) {
-									e.printStackTrace();
-								}
-				            }
-				        });
+						//for implementation of multi-threading
+//						executor.execute(new Runnable() {
+//				            @Override
+//				            public void run() {
+//				                try {
+//				           			Future<String> future = getSamplerData(samplerName, netProbeChildren, gatewayName, netProbeName, start, end);
+//									
+//								} catch (InterruptedException | ExecutionException e) {
+//									e.printStackTrace();
+//								}
+//				            }
+//				        });
+						
+						JSONArray samplerChildren = new JSONArray();
+						
+						JSONObject sampler = new JSONObject();
+
+						sampler.put("name", samplerName);
+						sampler.put("children", samplerChildren);
+						
+						netProbeChildren.put(sampler);
+						
+						JSONObject undefined = new JSONObject();
+						JSONObject OK = new JSONObject();
+						JSONObject warning = new JSONObject();
+						JSONObject critical = new JSONObject();
+						
+						samplerChildren.put(undefined);
+						samplerChildren.put(OK);
+						samplerChildren.put(warning);
+						samplerChildren.put(critical);
+
+						//for implementation of multi-threading
+//						Future<Integer> undefinedFuture = eventRepository.findEventCountBySeverity(gatewayName, netProbeName, samplerName, "-1", start, end);
+//						Future<Integer> OKFuture = eventRepository.findEventCountBySeverity(gatewayName, netProbeName, samplerName, "0", start, end);
+//						Future<Integer> warningFuture = eventRepository.findEventCountBySeverity(gatewayName, netProbeName, samplerName, "1", start, end);
+//						Future<Integer> criticalFuture = eventRepository.findEventCountBySeverity(gatewayName, netProbeName, samplerName, "2", start, end);
+						
+						int undefinedCount = eventRepository.findEventCountByGatewayProbeSamplerSeverityBetweenOptionalTimes(gatewayName, netProbeName, samplerName, "-1", start, end);
+						int OKCount = eventRepository.findEventCountByGatewayProbeSamplerSeverityBetweenOptionalTimes(gatewayName, netProbeName, samplerName, "0", start, end);
+						int warningCount = eventRepository.findEventCountByGatewayProbeSamplerSeverityBetweenOptionalTimes(gatewayName, netProbeName, samplerName, "1", start, end);
+						int criticalCount = eventRepository.findEventCountByGatewayProbeSamplerSeverityBetweenOptionalTimes(gatewayName, netProbeName, samplerName, "2", start, end);
+						
+						undefined.put("name", "undefined");			
+						undefined.put("size", undefinedCount);
+				
+						OK.put("name", "OK");
+						OK.put("size", OKCount);
+
+						warning.put("name", "warning");
+						warning.put("size", warningCount);
+
+						critical.put("name", "critical");
+						critical.put("size", criticalCount);
+						
+
 					}
 				}
 			}
 
 			visualRoot.put("children", flareChildren);
-			System.out.println(flareChildren);
 			return visualRoot.toString();
     }
     
-    
-    public Future<String> getSamplerData(String samplerName, JSONArray netProbeChildren, String gatewayName, String netProbeName, 
-    										Optional<Long> start, Optional<Long> end) throws JSONException, InterruptedException, ExecutionException {
-		
-			JSONArray samplerChildren = new JSONArray();
-			
-			JSONObject sampler = new JSONObject();
-
-			sampler.put("name", samplerName);
-			sampler.put("children", samplerChildren);
-			
-			netProbeChildren.put(sampler);
-			
-			JSONObject undefined = new JSONObject();
-			JSONObject OK = new JSONObject();
-			JSONObject warning = new JSONObject();
-			JSONObject critical = new JSONObject();
-			
-			samplerChildren.put(undefined);
-			samplerChildren.put(OK);
-			samplerChildren.put(warning);
-			samplerChildren.put(critical);
-
-			Future<Integer> undefinedFuture = eventRepository.findEventCountBySeverity(gatewayName, netProbeName, samplerName, "-1", start, end);
-			Future<Integer> OKFuture = eventRepository.findEventCountBySeverity(gatewayName, netProbeName, samplerName, "0", start, end);
-			Future<Integer> warningFuture = eventRepository.findEventCountBySeverity(gatewayName, netProbeName, samplerName, "1", start, end);
-			Future<Integer> criticalFuture = eventRepository.findEventCountBySeverity(gatewayName, netProbeName, samplerName, "2", start, end);
-			
-			undefined.put("name", "undefined");			
-			undefined.put("size", undefinedFuture.get());
-	
-			OK.put("name", "OK");
-			OK.put("size", OKFuture.get());
-
-			warning.put("name", "warning");
-			warning.put("size", warningFuture.get());
-
-			critical.put("name", "critical");
-			critical.put("size", criticalFuture.get());
-			return null;
-	}
-    
-//    public String formatDiagram3(String visualType, Optional<Long> start, Optional<Long> end) throws JSONException {
-//    
-//    	JSONObject visualRoot = new JSONObject();
-//    	
-//    	if(visualType.equals("zoomableSunburst"))
-//    		visualRoot.put("name", "flare");
-//    	else if(visualType.equals("collapsibleTree"))
-//    		visualRoot.put("name", "gateways");
-//    	
-//    	return null;
-//    }
-//    
-//    /**
-//     * Helper method which formats event data into a valid representation for the specified visual type (only for zoomable sunburst or collapsible tree).
-//     * @param visual - String that represents the type of d3.js visual.
-//     * @param start- Optional<Long> which limits the events in the selection to those after the start value if it is specified.
-//     * @param end - Optional<Long> which limits the events in the selection to those before the end value if it is specified.
-//     * @return String representing the event data formatted for the specified visual type.
-//     * @throws JSONException - Exception which catches any invalid JSON.
-//     */
-//    public String formatDiagram2(String visualType, Optional<Long> start, Optional<Long> end) throws JSONException {
-//    	
-//    	JSONObject visualRoot = new JSONObject();
-//    	
-//    	if(visualType.equals("zoomableSunburst"))
-//    		visualRoot.put("name", "flare");
-//    	else if(visualType.equals("collapsibleTree"))
-//    		visualRoot.put("name", "gateways");
+    //For implementation of multi-threading
+//    public Future<String> getSamplerData(String samplerName, JSONArray netProbeChildren, String gatewayName, String netProbeName, 
+//    										Optional<Long> start, Optional<Long> end) throws JSONException, InterruptedException, ExecutionException {
+//		
+//			JSONArray samplerChildren = new JSONArray();
 //			
-//			JSONArray flareChildren = new JSONArray();
+//			JSONObject sampler = new JSONObject();
 //
-//			List<String> netProbes;		
-//			List<String> samplers;	
-//			List<String> gateways = eventRepository.findDistinctGateways(start, end);
+//			sampler.put("name", samplerName);
+//			sampler.put("children", samplerChildren);
+//			
+//			netProbeChildren.put(sampler);
+//			
+//			JSONObject undefined = new JSONObject();
+//			JSONObject OK = new JSONObject();
+//			JSONObject warning = new JSONObject();
+//			JSONObject critical = new JSONObject();
+//			
+//			samplerChildren.put(undefined);
+//			samplerChildren.put(OK);
+//			samplerChildren.put(warning);
+//			samplerChildren.put(critical);
 //
-//			JSONArray netProbeArr = new JSONArray(); //example: [{gateway: gateway1, probe: MSH}, {gateway1: MSC}, {gateway1: virtualProbe}]
+//			Future<Integer> undefinedFuture = eventRepository.findEventCountBySeverity(gatewayName, netProbeName, samplerName, "-1", start, end);
+//			Future<Integer> OKFuture = eventRepository.findEventCountBySeverity(gatewayName, netProbeName, samplerName, "0", start, end);
+//			Future<Integer> warningFuture = eventRepository.findEventCountBySeverity(gatewayName, netProbeName, samplerName, "1", start, end);
+//			Future<Integer> criticalFuture = eventRepository.findEventCountBySeverity(gatewayName, netProbeName, samplerName, "2", start, end);
 //			
-//			JSONArray gatewayChildren = new JSONArray();
-//			
-//			
-//			
-//			//for each gateway, find distinct probes and add the pair to the array
-//			for(String gatewayName : gateways)	{
-//			
-//				netProbes = eventRepository.findDistinctProbesByGateway(gatewayName, start, end);
-//								
-//				for(String netProbeName: netProbes) {
-//					
-//					JSONObject netProbePair = new JSONObject();
-//					netProbePair.put("gateway", gatewayName);
-//					netProbePair.put("probe", netProbeName);
-//					netProbeArr.put(netProbePair);
-//				}
-//			}
-//			
-//			for(int i = 0; i < netProbeArr.length(); i++) {
-//				
-//				String netProbeArrName = netProbeArr.getJSONObject(i).getString("gateway");
-//				String netProbeArrValue = netProbeArr.getJSONObject(i).getString("probe");
-//				samplers = eventRepository.findDistinctSamplersByProbeAndGateway(netProbeArrName, netProbeArrValue, start, end);
-//				
-//				for(String samplerName : samplers) {
-//					
-//					JSONObject sampler = new JSONObject();
-//					JSONArray eventArr = new JSONArray();
-//					sampler.put("name", samplerName);
-//					sampler.put("events", eventArr);
-//				}
-//			}
 //
-//			visualRoot.put("children", flareChildren);
 //			
-//				return visualRoot.toString();
-//			}
-	
-			
+//			undefined.put("name", "undefined");			
+//			undefined.put("size", undefinedFuture.get());
+//	
+//			OK.put("name", "OK");
+//			OK.put("size", OKFuture.get());
+//
+//			warning.put("name", "warning");
+//			warning.put("size", warningFuture.get());
+//
+//			critical.put("name", "critical");
+//			critical.put("size", criticalFuture.get());
+//			return null;
+//			
+//			
+//	}
     
+
     
     
 
@@ -624,15 +523,13 @@ public class EventController {
      * @return String representing the event data formatted for the calendar visual type.
      * @throws JSONException - Exception which catches any invalid JSON.
      */
-    public String formatCalendarView() throws JSONException {
+    public String formatCalendarData() throws JSONException {
     	
     	JSONArray array = new JSONArray();    			
     	
-		long startTime = System.nanoTime();
+
     	List<Long> timestamps = eventRepository.findAllTimestamps();
-		long endTime = System.nanoTime();
-		System.out.println("Duration of finding all events: " + (endTime - startTime)/1000000);
-    	
+
     	HashMap<String, Integer> map = new HashMap<>();
     	
     	for(Long e : timestamps) {

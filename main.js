@@ -1,5 +1,10 @@
-//Draw visual when an option is selected from the list of visuals (dropdown button)
+var urlStart = "http://192.168.2.86:8080/api/events"; //beginning of endpoints
+
+
 $(document).ready(function() {
+	
+	//Select the dropdown button that contains a list of optional visuals
+	//and set an 'onclick' function which draws the appropriate visual when chosen.
     $('.dropdown').each(function (key, dropdown) {
         var $dropdown = $(dropdown);
         $dropdown.find('.dropdown-menu a').on('click', function() {
@@ -12,10 +17,10 @@ $(document).ready(function() {
 			
 			//create the request url for the selected visual and draw the visual
 			if($dropdown.find('button').text() == "Zoomable Sunburst "){
-				
+
 				//accounts for the specified date and time (if specified)
 				url = getDateTimeURLForDiagram("zoomableSunburstJSON");
-			
+
 				getDataFromRequest(url).then(function(result){
 					drawZoomableSunburst(result);
 				});
@@ -30,12 +35,13 @@ $(document).ready(function() {
 			}
 			else if($dropdown.find('button').text() == "Calendar "){
 				
-				getDataFromRequest("http://192.168.2.86:8080/api/events/calendarViewJSON").then(function(result){
-					drawCalendarView(result);
+				getDataFromRequest(urlStart + "/calendarJSON").then(function(result){
+					drawCalendar(result);
 				});
 			}
         });
     });
+	
 	//gives 'update' button functionality to redraw the selected visual based on dates and times specified
 	$('#update-visual').on('click', function() {
 		
@@ -44,28 +50,27 @@ $(document).ready(function() {
 		
 		if($dropdown.find('button').text() == "Zoomable Sunburst "){
 				
-				url = getDateTimeURLForDiagram("zoomableSunburstJSON");
+			url = getDateTimeURLForDiagram("zoomableSunburstJSON");
 			
-				getDataFromRequest(url).then(function(result){
-							
-					drawZoomableSunburst(result);
-				});
-			}
-			else if($dropdown.find('button').text() == "Collapsible Tree "){
+			getDataFromRequest(url).then(function(result){
+				drawZoomableSunburst(result);
+			});
+		}
+		else if($dropdown.find('button').text() == "Collapsible Tree "){
 				
-				url = getDateTimeURLForDiagram("collapsibleTreeJSON");
+			url = getDateTimeURLForDiagram("collapsibleTreeJSON");
 			
-				getDataFromRequest(url).then(function(result){
-					drawCollapsibleTree(result);
-				});
-			}
+			getDataFromRequest(url).then(function(result){
+				drawCollapsibleTree(result);
+			});
+		}
 	})
 });
 
 //converts date to timestamp
 function toTimestamp(strDate){
-	var datum = Date.parse(strDate);
-	return datum/1000;
+	var date = Date.parse(strDate);
+	return date/1000;
 }
 
 //accounts for time zone differences
@@ -75,53 +80,37 @@ function convertUTCDateToLocalDate(date) {
 }
 
 
-
-function drawZoomableSunburst(data){
+//This function creates a zoomable sunburst visual
+function drawZoomableSunburst(root){
 	
-/*	var diagramContainer = d3.select('body').select('#diagramContainer');
-
- 	var sizeAndCountForm = diagramContainer.append('form')
 	
-	var j = 0;
-	
-	var labels = sizeAndCountForm.selectAll('label')
-		.data(['Size', 'Count'])
-		.enter()
-		.append('label')
-		.text(function(d) {return d;})
-		.style('color', 'white')
-		.insert('input')
-		.attr({type: 'radio',
-				class: 'shape',
-				name: 'mode',
-				value: function(d,i) {return i;}})
-		.property('checked', function(d, i) {return i===j;}); */
-		
-	
-	d3.selectAll('#tooltip').style('opacity', '0');
-		
-	//delete any extra tooltips
+	//delete any extra tooltips that may have been created from any of the visuals, so that only one remains
+//-------------------------------------------------------------------------------------------------------------
 	var tooltips = d3.selectAll("#tooltip");
-		
 	if(tooltips.size() > 1){
 		for (var i = 0; i < tooltips.size()-1; i++){
 			d3.select('#tooltip').remove();
 		}
 	}
+
+	//Set the opacity of all tooltips to zero
+//-------------------------------------------------------------------------------------------------------------
+	d3.selectAll('#tooltip').style('opacity', '0');
 	
-	var root = data;
-	
-	var vWidth = 600;
-	var vHeight = 600;
-	var radius = Math.min(vWidth, vHeight) / 2;
-	
-	// Breadcrumb dimensions: width, height, spacing, width of tip/tail.
+	//Breadcrumb dimensions: width, height, spacing, width of tip/tail.
+//--------------------------------------------------------------------------------------------------
 	var b = {
 		w: 150,
 		h: 25,
 		s: 5,
 		t: 10
-	};
+	};	
+	
+	//Sunburst dimensions
+//--------------------------------------------------------------------------------------------------
+	var vWidth = 600;
+	var vHeight = 600;
+	var radius = Math.min(vWidth, vHeight) / 2;
 	
 	var x = d3.scale.linear()
 		.range([0, 2 * Math.PI]);
@@ -135,12 +124,18 @@ function drawZoomableSunburst(data){
 		.clamp(true)
 		.range([90, 20]);
 
-	enableDateTimeUpdate();
+		
 
-	clearDiagramContainer()
+	//Enable start and end date inputs
+//--------------------------------------------------------------------------------------------------
+	enableDateTimeUpdate();
+	
+	//Clear any diagram container of any visuals that are being displayed
+//--------------------------------------------------------------------------------------------------
+	clearDiagramContainer();
 	
 	//Prepare our physical space
-	//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 	var svg = d3.select("#diagramContainer").append("svg")
 		.attr("width", vWidth).attr("height", vHeight)
 		.style('margin-bottom', '20px')
@@ -149,13 +144,20 @@ function drawZoomableSunburst(data){
 	    .attr("id", "container")
 		.attr('transform', 'translate(' + vWidth / 2 + ',' + vHeight / 2 + ')');
 		
-		
+
 	initializeBreadcrumbTrail();
 			
+	//Object determines the size of parent elements (the arcs of sunburst) based on the sum of the
+	//sizes of its children
+//--------------------------------------------------------------------------------------------------
 	var partition = d3.layout.partition()
 		.sort(function(a, b) { return d3.ascending(a.name, b.name); })
 		.size([2 * Math.PI, radius])
-		
+
+	
+	//calculates size of each arc, defining the four lines of the perimeter based on start, end angles
+	//and inner, outer radii
+//--------------------------------------------------------------------------------------------------
 	var arc = d3.svg.arc()
 		.startAngle(function(d) { return d.x; })
 		.endAngle(function(d) { return d.x + d.dx - .01 / (d.depth + .5); })
@@ -168,8 +170,10 @@ function drawZoomableSunburst(data){
 
 
 
-	//Start creating sunburst	
-	//--------------------------------------------------------------------------------------------------
+	//organizes data into the sunburst pattern
+	//ensures all 360 degrees of circle are used
+	//ensures each slice is sized relative to others
+//--------------------------------------------------------------------------------------------------
 	partition
 		.value(function(d) { return d.size; })
 		.nodes(root)
@@ -180,7 +184,7 @@ function drawZoomableSunburst(data){
 			d.fill = fill(d);
 		});
 
-    //Now redefine the value function to use the previously-computed sum.
+    //Redefine the value function to use the previously-computed sum.
 	partition
 		.children(function(d, depth) { return depth < 2 ? d._children : null; })
 		.value(function(d) { return d.sum; });
@@ -191,12 +195,12 @@ function drawZoomableSunburst(data){
 
 	center.append("title")
    	    .text("zoom out");
-		  
+
 	var partitioned_data = partition.nodes(root).slice(1)
 
 	var g = svg.selectAll("g")
 		.append("g")
-	  
+
 	var path = svg.selectAll("g")
 	    .data(partitioned_data)
 		.enter().append("path")
@@ -208,19 +212,6 @@ function drawZoomableSunburst(data){
 		.on("mousemove", mouseMoveArc)
 		.on("mouseout", mouseOutArc);
 		
-		
-/* 	 d3.selectAll("input").on("change", function change() {
-		var value = this.value === "count"
-			? function() { return 1; }
-			: function(d) { return d.sum; };
-		path
-			.data(partition.value(value).nodes(root).slice(1))
-		  .transition()
-			.duration(1500)
-			.attrTween("d", arcTween);
-	  }); */
-
-
 	var texts = svg.selectAll("g")
 		.data(partitioned_data)
 		.enter().append("text")
@@ -239,7 +230,7 @@ function drawZoomableSunburst(data){
 		
 		
 	//Zoom functions
-	//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 	function zoomIn(p) {
 		
 		if (p.depth > 1) 
@@ -331,11 +322,10 @@ function drawZoomableSunburst(data){
 		texts.style("opacity", 0)		
 			.attr("transform", function(d) {  return 'translate(' + arc.centroid(d) + ') rotate(' + computeTextRotation(d) + ')'; })
 			.attr("text-anchor", "middle")
-		    .attr("dx", "0") // margin
-		    .attr("dy", ".35em") // vertical-align
+		    .attr("dx", "0") 
+		    .attr("dy", ".35em") 
 		    .filter(filter_min_arc_size_text)    	
 		    .text(function(d,i) {return d.name === "root" ? "" : d.name})
-			//.style("font-size", function(d) { return Math.min(2 * d.r, (2 * d.r - 8) / this.getComputedTextLength() * 24) + "px"; })
 			.transition().delay(750).style("opacity", 1) 
     }
 
@@ -428,7 +418,7 @@ function drawZoomableSunburst(data){
 		.attr("height", 50)
 		.attr("id", "trail");
 	}
-		
+
 	// Generate a string that describes the points of a breadcrumb polygon.
 	function breadcrumbPoints(d, i) {
 	  var points = [];
@@ -507,6 +497,7 @@ function drawZoomableSunburst(data){
 		return c;
 	}
 
+	//transitions selected arcs from their current angles to the specified new angles
 	function arcTween(b) {
 		var i = d3.interpolate(this._current, b);
 		this._current = i(0);
@@ -514,16 +505,13 @@ function drawZoomableSunburst(data){
 			return arc(i(t));
 	    };
 	}
-	
-/* 	function stash(d) {
-	  d.x0 = d.x;
-	  d.y0 = d.y;
-	} */
 
 	function updateArc(d) {
 		return {depth: d.depth, x: d.x, dx: d.dx};
 	}
 	
+	//determines the angle the text should be rotated so that it is positioned according to its location
+	//around the arc
 	function computeTextRotation(d) {
 		var angle=(d.x +d.dx/2)*180/Math.PI - 90;	
 		return (angle > 90) ? 180 + angle : angle;
@@ -550,7 +538,6 @@ function drawZoomableSunburst(data){
 
 function drawCollapsibleTree(data){
 	
-	//d3.selectAll('#tooltip').style('opacity', '0');
 	d3.selectAll('#tooltip').remove();
 	
 	var margin = {top: 20, right: 120, bottom: 20, left: 120},
@@ -569,7 +556,7 @@ function drawCollapsibleTree(data){
 		
 	enableDateTimeUpdate();	
 
-	clearDiagramContainer()
+	clearDiagramContainer();
 	
 	var svg = d3.select("#diagramContainer").append("svg")
 		.attr("width", width + margin.right + margin.left)
@@ -714,19 +701,18 @@ function drawCollapsibleTree(data){
 
 
 
+var toolTipDescription = "";
 
 
+async function drawCalendar(root) {
 
-function drawCalendarView(data) {
-	
-	//d3.selectAll('#tooltip').style('opacity', '0');
 	d3.selectAll('#tooltip').remove();
 	
-	var minAndMaxYear = findMinAndMaxYearsOfData(data);
+	var minAndMaxYear = findMinAndMaxYearsOfData(root);
 	
 	var width = 900,
 		height = 105,
-		cellSize = 12; // cell size
+		cellSize = 12; 
 		week_days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 		month = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 		
@@ -737,10 +723,10 @@ function drawCalendarView(data) {
 		parseDate = d3.time.format("%Y%m%d").parse;
 			
 	var color = d3.scale.linear()
-		.domain([0, 2000])
+		.domain([findMinCountEventsOfDay(root), findMaxCountEventsOfDay(root)])
 		.range(["#ffffbf", "#a50026"]);
-		
-	clearDiagramContainer()
+
+	clearDiagramContainer();
 	
 	disableDateTimeUpdate();
 	
@@ -766,7 +752,7 @@ function drawCalendarView(data) {
 	calendars.filter(function(d, i) {
 		return i === 0;
 	}).style('margin-top', '20px');
-						
+
 	svg.append("text")
 		.attr("transform", "translate(-38," + cellSize * 3.5 + ")rotate(-90)")
 		.style("text-anchor", "middle")
@@ -774,17 +760,17 @@ function drawCalendarView(data) {
 		.style('fill', 'white');
 	 
 	for (var i=0; i<7; i++){    
-	svg.append("text")
-		.attr("transform", "translate(-5," + cellSize*(i+1) + ")")
-		.style("text-anchor", "end")
-		.attr("dy", "-.25em")
-		.style('fill', 'white')
-		.text(function(d) { return week_days[i]; }); 
+		svg.append("text")
+			.attr("transform", "translate(-5," + cellSize*(i+1) + ")")
+			.style("text-anchor", "end")
+			.attr("dy", "-.25em")
+			.style('fill', 'white')
+			.text(function(d) { return week_days[i]; }); 
 	}
 
 	var rect = svg.selectAll(".day")
 		.data(function(d) { return d3.time.days(new Date(d, 0, 1), new Date(d + 1, 0, 1)); })
-	  .enter()
+	    .enter()
 		.append("rect")
 		.attr("class", "day")
 		.attr("width", cellSize)
@@ -796,7 +782,7 @@ function drawCalendarView(data) {
 
 	var legend = svg.selectAll(".legend")
 		  .data(month)
-		.enter().append("g")
+		  .enter().append("g")
 		  .attr("class", "legend")
 		  .attr("transform", function(d, i) { return "translate(" + (((i+1) * 50)+8) + ",0)"; });
 
@@ -813,9 +799,8 @@ function drawCalendarView(data) {
 		.attr("class", "month")
 		.attr("id", function(d,i){ return month[i] })
 		.attr("d", monthPath);
-
-	var root = data;
-
+		
+		
 	root.forEach(function(d) {
 	   d.value = parseInt(d.value);
 	});
@@ -823,18 +808,104 @@ function drawCalendarView(data) {
     var data = d3.nest()
 		.key(function(d) { return d.date; })
 		.rollup(function(d) { return d[0].value; })
-		.map(root);
+		.map(root);		
+		
 
-    rect.filter(function(d) { return d in data; })
-		.attr("fill", function(d) { return color(data[d]); })
-		.attr("data-title", function(d) { return "date: " + d.substring(4,6) + "-" + d.substring(6,8) 
-				+ "-" + d.substring(0,4) + "<br>" + "value : "+ data[d]})
-		.on("click", function(d) { getDataFromRequest(getURLForCalendarDay(d)).then(
-				function(result){
-					updateList(result); 
-				});   
-		});
-		$("rect").tooltip({container: 'body', html: true, placement:'top'});
+		
+   	var dataKeys = [];
+	var dataTitle = "";
+	
+	var rects = rect.filter(function(d) { return d in data; })[0];
+	
+	
+	for(var i in data){
+		dataKeys.push(i);
+	}
+	
+	
+	//makes and sets a tooltip for each calendar day, also sets onclick function for each day and fills tile with the appropriate color
+	async function appendDataTitles(dataKey, rect) {
+		
+		dataTitle = "";
+		await getDataFromRequest(urlStart + "/gateways/count" + getURLForCalendarItem(dataKey))
+				.then(
+					async function(result){
+						dataTitle += result + ")" + "<br>" + "probes(";
+						
+						await getDataFromRequest(urlStart + "/probes/count" + getURLForCalendarItem(dataKey))
+							.then(
+								async function(result){
+									dataTitle += result + ")" + "<br>" + "samplers(";
+									
+									await getDataFromRequest(urlStart + "/samplers/count" + getURLForCalendarItem(dataKey))
+										.then(
+											async function(result){
+												dataTitle += result + ")" + "<br>" + "events(";
+												
+													await getDataFromRequest(urlStart + "/count" + getURLForCalendarItem(dataKey))
+														.then(
+															async function(result){
+																dataTitle += result + ")"+ "<br>" + "------critical(";
+										
+																await getDataFromRequest(urlStart + "/critical/count" + getURLForCalendarItem(dataKey))
+																	.then(
+																		async function(result){
+																			dataTitle += result + ")"+ "<br>" + "-----warning(";
+																			
+																			await getDataFromRequest(urlStart + "/warning/count" + getURLForCalendarItem(dataKey))
+																				.then(
+																					async function(result){
+																						dataTitle += result + ")"+ "<br>" + "----------OK(";
+										
+																						await getDataFromRequest(urlStart + "/OK/count" + getURLForCalendarItem(dataKey))
+																							.then(
+																								async function(result){
+																									dataTitle += result + ")"+ "<br>" + "---undefined(";
+																							
+																										await getDataFromRequest(urlStart + "/undefined/count" + getURLForCalendarItem(dataKey))
+																											.then(
+																												async function(result){
+																													dataTitle += result + ")";	
+																
+																													dataTitle = "date: " + dataKey.substring(4,6) + "-" + dataKey.substring(6,8)
+																																+ "-" + dataKey.substring(0,4) + "<br>" + "gateways(" + dataTitle;
+																													
+																													rect
+																														.setAttribute("fill", color(data[dataKey]))
+																													rect	
+																														.setAttribute('data-title', dataTitle)
+																													rect
+																														.onclick = async function(d) {  
+																															await getDataFromRequest(urlStart + getURLForCalendarDay(dataKey))
+																																.then(
+																																	function(result){
+																																		tabulateEvents(result); 
+																																	}
+																																);
+																														} 
+																												}
+																											)
+																								}
+																							)
+																					}
+																				)
+																		}
+																	)														
+															}
+														)
+											}
+										)
+								}
+							)
+					}
+				)
+	}
+	
+	for(var i = 0; i < rects.length; i++)
+		await appendDataTitles(dataKeys[i], rects[i]);
+		
+	$("rect").tooltip({container: 'body', html: true, placement:'top'});
+	
 
 	function monthPath(t0) {
 		var t1 = new Date(t0.getFullYear(), t0.getMonth() + 1, 0),
@@ -879,7 +950,7 @@ function drawCalendarView(data) {
 
 
 
-
+//Enables the inputs for start and end times.
 function enableDateTimeUpdate(){
 	d3.select('#start').attr('disabled', null);
 	d3.select('#start-time').attr('disabled', null);
@@ -888,6 +959,7 @@ function enableDateTimeUpdate(){
 	d3.select('#update-visual').attr('disabled', null);
 }
 
+//Disables the inputs for start and end times.
 function disableDateTimeUpdate(){
 	d3.select('#start').attr('disabled', 'disabled');
 	d3.select('#start-time').attr('disabled', 'disabled');
@@ -896,33 +968,37 @@ function disableDateTimeUpdate(){
 	d3.select('#update-visual').attr('disabled', 'disabled');
 }
 
+//Gets values from the start and end inputs and formats them into a string that an be appended to 
+//the end of an httpRequest
 function getDateTimeURLForDiagram(diagramType){
 	
-	var url = "http://192.168.2.86:8080/api/events/" + diagramType;
+	var url = urlStart + "/" + diagramType;
 	var $startDate = $('#start');
 	var $endDate = $('#end');
 	var $startTime = $('#start-time');
 	var $endTime = $('#end-time');
-				
+
 	var startDateObj = new Date($startDate.val().toString() + ":" + ($startTime.val()));
 	var endDateObj = new Date($endDate.val().toString() + ":" + ($endTime.val()));
-				
+
 	startDateObj = convertUTCDateToLocalDate(startDateObj);
 	endDateObj = convertUTCDateToLocalDate(endDateObj);
-		
+
 	var start = toTimestamp(startDateObj);
 	var end = toTimestamp(endDateObj);
-		
+
 	if(isNaN(start) == false && isNaN(end) == false)
 		url += "?start=" + start + "&end=" + end;
 	else if(isNaN(start) == false && isNaN(end))
 		url += "?start=" + start;
 	else if(isNaN(start) && isNaN(end) == false)
 		url += "?end="+end;
-		
+
 	return url;
 }
 
+//Returns an array containing the earliest year that an event was logged and puts it in the first position
+//and the last year that an event was logged in the second position.
 function findMinAndMaxYearsOfData(data) {
 
 	var years = [];
@@ -940,6 +1016,25 @@ function findMinAndMaxYearsOfData(data) {
 	return minAndMaxYear;
 }
 
+//Returns the count of events from the day with the most events.
+function findMaxCountEventsOfDay(data) {
+	var values = [];
+	for(var e in data){
+		values[e] = data[e].value;
+	}
+	return Math.max.apply(null, values);
+}
+
+//Returns the count of events from the day with the least events.
+function findMinCountEventsOfDay(data) {
+	var values = [];
+	for(var e in data){
+		values[e] = data[e].value;
+	}
+	return Math.min.apply(null, values);
+}
+
+//formats the start and end parameters for any request url that requires start and end times
 function getURLForCalendarDay(date){
 	
 	var year        = date.substring(0,4);
@@ -949,12 +1044,30 @@ function getURLForCalendarDay(date){
 
 	var date        = new Date(year, month-1, day);
 	var secondDate  = new Date(year, month-1, nextDay.toString());
-	
-	return ("http://192.168.2.86:8080/api/events/start/" + 
-				(convertUTCDateToLocalDate(date).getTime() / 1000 ) + "/end/" + 
-				(convertUTCDateToLocalDate(secondDate).getTime() / 1000));
+
+	return ("/start/" + 
+				(date.getTime() / 1000) + "/end/" + 
+				(secondDate.getTime() / 1000));
 }
 
+//formats the start and end parameters for any request url that has optional start and end times
+function getURLForCalendarItem(date){
+	
+	var year        = date.substring(0,4);
+	var month       = date.substring(4,6);
+	var day         = date.substring(6,8);
+	var nextDay		= parseInt(day) + 1;
+
+	var date        = new Date(year, month-1, day);
+	var secondDate  = new Date(year, month-1, nextDay.toString());
+	
+	return ("?start=" + 
+				(date.getTime() / 1000)  + "&end=" + 
+				(secondDate.getTime() / 1000));
+}
+
+
+//returns data from an httpRequest
 async function getDataFromRequest(url) {
 	let response = await fetch(url);
 
@@ -962,7 +1075,7 @@ async function getDataFromRequest(url) {
 		return response.json();
 }
 
-
+//removes any svg or data tables present so a new one can take its place
 function clearDiagramContainer() {
 	//remove svg if one exists
 	if(!(d3.select('body').select('svg').empty()))
@@ -972,7 +1085,8 @@ function clearDiagramContainer() {
 		d3.select('.clusterize').remove()
 }
 
-
+//creates a request url for a specific child node of a visual and then sends the request and
+//creates a table which displays the data returned
 function listEvents(p) {
 	var url = "";
 	var parentCount = 0;
@@ -986,7 +1100,7 @@ function listEvents(p) {
 	}
 
 	while(p.parent){
-		if(p.name == "critical")
+/* 		if(p.name == "critical")
 			url = types[parentCount] + "/" + 2 + "/" + url;
 		else if(p.name == "warning")
 			url = types[parentCount] + "/" + 1 + "/" + url;
@@ -995,31 +1109,42 @@ function listEvents(p) {
 		else if(p.name == "undefined")
 			url = types[parentCount] + "/" + -1 + "/" + url;
 		else
-			url = types[parentCount] + "/" + p.name + "/" + url;
+			url = types[parentCount] + "/" + p.name + "/" + url; */
+		
+		if(p.name == "critical")
+			url = url;
+		else if(p.name == "warning")
+			url = url;
+		else if(p.name == "OK")
+			url = url;
+		else if(p.name == "undefined")
+			url = url;
+		else
+			url = types[parentCount] + "/" + p.name + "/" + url; 
+		
 			
 		p = p.parent;
 		parentCount--;
 	}
 	
-	url = "http://192.168.2.86:8080/api/events/" + url;
+	url = urlStart + "/" + url;
 	getDataFromRequest(url).then(function(result){
-		updateList(result);
+		tabulateEvents(result);
 	}); 
 }
 
-function updateList(data){
-	// render the table
-	tabulate(data);
-}
-
-/* function tabulate(data, columns) {
+//helper method which returns a table with the columns specified
+function tabulate(data, columns) {
 
 	if(!(d3.select('body').select('#dataTable').empty()))
 		d3.select('#dataTable').remove();
 	
-	var table = d3.select('body').append('table').attr("id", "dataTable")
-	.attr("class", "table table-striped");
-	var thead = table.append('thead').attr("class", "thead-dark");
+	var table = d3.select('body')
+		.append('table')
+		.attr("id", "dataTable")
+		.attr("class", "table table-striped");
+	var thead = table.append('thead')
+		.attr("class", "thead-dark");
 	var	tbody = table.append('tbody');
 
 	// append the header row
@@ -1047,21 +1172,18 @@ function updateList(data){
 			.append('td')
 			.text(function (d) { return d.value; });
 			
-
 	return table;
-} */
+}
 
-function tabulate(data, columns){
+//appends rows containing event data to the table
+function tabulateEvents(data){
 	
 	var dataRows = [];
 	for(var i = 0; i < data.length; i++){
 		
-		dataRows.push(
-			
-			//values: [data[i].timestamp, data[i].description],
-				
+		dataRows.push(				
 			'<tr><td>'+data[i].ref+'</td><td>'+data[i].timestamp+'</td><td>'+data[i].node_ref+'</td><td>'+
-					data[i].varname+'</td><td>'+data[i].severity+'</td><td>'+data[i].description+'</td><td>'+data[i].gateway+'</td><td>'+
+					data[i].varname+'</td><td class="sev">'+data[i].severity+'</td><td>'+data[i].description+'</td><td>'+data[i].gateway+'</td><td>'+
 					data[i].probe+'</td><td>'+data[i].managed_entity+'</td><td>'+data[i].sampler+'</td><td>'+data[i].type+'</td><td>'+data[i].dataview+'</td><td>'+
 					data[i].headline+'</td><td>'+data[i].rowname+'</td><td>'+data[i].columnname+'</td></tr>'
 		);
@@ -1075,26 +1197,15 @@ function tabulate(data, columns){
 	  scrollId: 'scroll-area',
 	  contentId: 'content-area',
 	  rows_in_block: 10
-	}); 
+	}); 	
+	
 
-	
-	
-	
 }
 
-/* function sortTableByTimestamp(data){
-	
-	data.sort(function(a, b){return a.values[0]-
-	
-}
 
-function sortTableByDescription(data){
-	
-	
-	
-}
- */
 
+ 
+//creates a table with columns for each data in an event
 function createEventListTable(){
 	
 	var columns = ['ref', 'timestamp', 'node_ref', 'varname', 'severity',
@@ -1125,11 +1236,6 @@ function createEventListTable(){
 		.data(columns).enter()
 		.append('th').text(function(d) { return d; })
 		
-		/* 		th.filter(function(d, i) { return d === 'timestamp'; })
-			.on('click', sortTableByTimestamp(dataRows));
-		
-		th.filter(function(d, i) { return d === 'description'; })
-			.on('click', sortTableByDescription(dataRows)); */
 			
 	var tbody = table.append('tbody')
 		.attr('class', 'clusterize-content')
